@@ -1,9 +1,3 @@
-[TOC]
-```markdown
-//安装
-npm install vue-server-renderer --save
-```
-
 ```markdown
 // 第 1 步：创建一个 Vue 实例
 const Vue = require('vue')
@@ -21,21 +15,18 @@ renderer.renderToString(app, (err, html) => {
   // => <div data-server-rendered="true">Hello World</div>
 })
 ```
-引入vue-server-renderer，他里面又一个createRenderer的方法，这个方法里的renderToString，可以把app变成字符串，第一个参数是vue实例，第二个参数是回调（错误参数，编译好的字符串）。
+引入vue-server-renderer，他里面又一个createRenderer的方法，这个方法里的renderToString，可以把app变成字符串，第一个参数是vue实例，第二个参数是回调（错误参数（err），编译好的字符串（html））。
 把vue实例搬到服务器里面来
 
 ## 简单例子
 ```mardown
 vue init webpack-simple ssr-demo
 cd ssr-demo
-npm i
-
-//新建server.js 复制官网例子
-
-//启动服务器
-node server.js
+//安装
+npm install vue-server-renderer --save
 ```
-```markdown
+```mardown
+//新建server.js 复制官网例子
 const Vue = require('vue')
 const server = require('express')()
 const renderer = require('vue-server-renderer').createRenderer()
@@ -66,6 +57,12 @@ server.get('*', (req, res) => {
 server.listen(8080)
 
 ```
+```markdown
+//启动服务器
+node server.js
+//查看
+http://localhost:8080
+```
 
 ## 使用一个页面模板
 ```markdown
@@ -87,7 +84,8 @@ renderer.renderToString(app, (err, html) => {
     <!--vue-ssr-outlet-->
   </body>
 </html>
-
+```
+```markdown
 //server.js
 const Vue = require('vue')
 const server = require('express')()
@@ -115,6 +113,10 @@ server.get('*', (req, res) => {
 server.listen(8080,function() {
   console.log('port:8080')
 })
+```
+```markdown
+//启动服务器
+node server.js
 ```
 ## 插值
 通过传入一个"渲染上下文对象"，作为 renderToString 函数的第二个参数，来提供插值数据
@@ -146,7 +148,8 @@ renderer.renderToString(app, context, (err, html) => {
     <!--vue-ssr-outlet-->
   </body>
 </html>
-
+```
+```markdwon
 //server.js
 const Vue = require('vue')
 const server = require('express')()
@@ -184,13 +187,12 @@ server.listen(8080,function() {
 })
 ```
 
-ssr是一份代码运行在两个环境里面（服务端、客户端），服务端先运行好之后，把模板渲染成html页面，然后返回给前端，前端再载入js文件
-
 ## 为每个请求创建一个新的根 Vue 实例
+为什么要新建app.js
+每次服务端渲染都要渲染一个新的app,不能用上一次渲染过的app对象，再去进行下一次渲染，因为app已经包含上一次渲染过的状态会影响我们渲染内容，所以每次都要去给他创建新的app
 ```markdown
 // src/app.js
 const Vue = require('vue')
-
 module.exports = function createApp (context) {
   return new Vue({
     data: {
@@ -199,7 +201,8 @@ module.exports = function createApp (context) {
     template: `<div>访问的 URL 是： {{ url }}</div>`
   })
 }
-
+```
+```markdown
 //server.js
 const Vue = require('vue')
 const server = require('express')()
@@ -218,10 +221,7 @@ server.get('*', (req, res) => {
     `,
     url:req.url
   }
-
   const app = createApp(context)
-  
-
   renderer.renderToString(app, context,(err, html) => {
     if (err) {
       res.status(500).end('Internal Server Error')
@@ -235,23 +235,34 @@ server.listen(8080,function() {
   console.log('port:8080')
 })
 ```
-
+```js
+//启动服务器
+node server.js
+//查看
+http://localhost:8080/5555
+```
+[源码：demo](https://github.com/sayid760/vue-ssr-demo/tree/master/ssr-demo1)
 ## router
-|-build
-| |-webpack.base.config.js   //基础的，通过merge合并到client和server上面
-| |-webpack.client.config.js  //客户端打包配置
-| |-webpack.server.config.js  //服务端打包配置
-|-src
-| |-components
-| | |-home.vue
-| | |-item.vue
-| |-App.vue
-| |-app.js
-| |-router.js
-|-server.js
+![image](https://github.com/sayid760/vue-ssr-demo/blob/master/screenshots/router.jpg)
+通过createRenderer渲染出来的只是应用内的内容，只是bundle的部分html代码，没有script标签去引用js文件,js文件是要我们自己去获取，并且要插入到html里面去，组成一个完整的html，返回给客户端，这样用户加载过去才能真正运行应用，不然的话只能看到我们访问这个页面的html内容，但是无法进行操作，不能进行路由跳转，所以这里自己手动引入打包的js<br/>
+ssr是一份代码运行在两个环境里面（服务端、客户端），服务端先运行好之后，把模板渲染成html页面，然后返回给前端，前端再载入js文件<br/>
+例子：<br/>
+|-build <br/>
+| |-webpack.base.config.js   //基础的，通过merge合并到client和server上面<br/>
+| |-webpack.client.config.js  //客户端打包配置<br/>
+| |-webpack.server.config.js  //服务端打包配置<br/>
+|-src<br/>
+| |-components<br/>
+| | |-home.vue<br/>
+| | |-item.vue<br/>
+| |-App.vue<br/>
+| |-app.js<br/>
+| |-router.js<br/>
+|-server.js<br/>
 
-app.js
-每次服务端渲染都要渲染一个新的app,不能用上一次渲染过的app对象，再去进行下一次渲染，因为app已经包含上一次渲染过的状态会影响我们渲染内容，所以内次都要去给他创建新的app
+如果增加路由这个逻辑，就要为路由添加渲染，<br/>
+router.matchedComponents 所有路由匹配到的路径<br/>
+
 ```js
 // app.js
 import Vue from 'vue'
@@ -313,7 +324,22 @@ export default context => {
 
 //返回的app是交给Bundle Renderer处理的，把html字符串渲染成html
 ```
-
+```js
+// index.template.html
+<html>
+  <head>
+    <!-- 使用双花括号(double-mustache)进行 HTML 转义插值(HTML-escaped interpolation) -->
+    <title>{{ title }}</title>
+    <!-- 使用三花括号(triple-mustache)进行 HTML 不转义插值(non-HTML-escaped interpolation) -->
+    {{{ meta }}}
+  </head>
+  <body>
+    <!--vue-ssr-outlet-->
+    <script src="/dist/manifest.client.js"></script>
+    <script src="/dist/main.client.js"></script>
+  </body>
+</html>
+```
 ```js
 //打包
 npm run build:client
@@ -325,17 +351,22 @@ node server.js
 [源码：demo](https://github.com/sayid760/vue-ssr-demo/tree/master/ssr-demo2)
 
 ## 服务器端数据预取
-|-build
-| |-webpack.base.config.js   //基础的，通过merge合并到client和server上面
-| |-webpack.client.config.js  //客户端打包配置
-| |-webpack.server.config.js  //服务端打包配置
-|-src
-| |-components
-| |-App.vue
-| |-app.js
-| |-router.js
-| |-store.js
-|-server.js
+例子：<br/>
+|-build<br/>
+| |-webpack.base.config.js   //基础的，通过merge合并到client和server上面<br/>
+| |-webpack.client.config.js  //客户端打包配置<br/>
+| |-webpack.server.config.js  //服务端打包配置<br/>
+|-src<br/>
+| |-components<br/>
+| |-App.vue<br/>
+| |-app.js<br/>
+| |-router.js<br/>
+| |-store.js<br/>
+|-server.js<br/>
+
+vuex-router-sync<br/>
+主要是把vue-router的状态放进vuex的state中（把vue-router 纳入 vuex 的 state 中使用），这样就可以通过改变state来进行路由的一些操作，当然直接使用像是 $route.go之类的也会影响到state，会同步的是这几个属性<br/>
+参考：https://github.com/vuejs/vuex-router-sync
 ```js
 //安装
 npm i vuex-router-sync
@@ -373,7 +404,7 @@ export function createStore () {
   })
 }
 ```
-如果要把vue-router 纳入 vuex 的 state 中使用，就安装vuex-router-sync，参考：https://github.com/vuejs/vuex-router-sync
+
 ```js
 // app.js
 import Vue from 'vue'
@@ -425,6 +456,7 @@ export default {
 [源码：demo](https://github.com/sayid760/vue-ssr-demo/tree/master/ssr-demo3)
 
 ## 混合
+![image](https://github.com/sayid760/vue-ssr-demo/blob/master/screenshots/render.jpg)
 bundle renderer可以说是createRenderer，通过它可以把html字符串渲染成html，再通过client Bundle（js功能之类的）和html进行混合
 
 ```js
@@ -484,8 +516,8 @@ plugins: [
 [源码：demo](https://github.com/sayid760/vue-ssr-demo/tree/master/ssr-demo4)
 
 ## 修改title
-src
-|-title-mixin.js
+src<br/>
+|-title-mixin.js<br/>
 ```js
 // title-mixin.js
 function getTitle (vm) {
@@ -552,46 +584,3 @@ export default {
 }
 ```
 [源码：demo](https://github.com/sayid760/vue-ssr-demo/tree/master/ssr-demo5)
-
-## 提取css
-
-```js
-//
-const ExtractTextPlugin = require('extract-text-webpack-plugin')
-const isProduction = process.env.NODE_ENV === 'production'
-
-{
-    test: /\.vue$/,
-    loader: 'vue-loader',
-    options: {
-        extractCSS: isProduction
-    }
-},
-{
-    test: /\.css$/,
-    // 重要：使用 vue-style-loader 替代 style-loader
-    use: isProduction
-    ? ExtractTextPlugin.extract({
-        use: 'css-loader',
-        fallback: 'vue-style-loader'
-    })
-    : ['vue-style-loader', 'css-loader']
-}
-
-
-if (process.env.NODE_ENV === 'production') {
-  module.exports.devtool = '#source-map'
-  module.exports.plugins = (module.exports.plugins || []).concat([
-    new ExtractTextPlugin({ filename: 'common.[chunkhash].css' })
-  ])
-}
-```
-```js
-// css/public.css
-body{
-    background: pink
-}
-
-//app.js
-import './css/public.css'  //引入css
-```
