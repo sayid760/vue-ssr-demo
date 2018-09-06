@@ -342,11 +342,10 @@ export default context => {
 ```
 ```js
 //打包
-npm run build:client
-npm run build:server
+npm run build
 
 // 启动
-node server.js
+npm run dev
 ```
 [源码：demo](https://github.com/sayid760/vue-ssr-demo/tree/master/ssr-demo2)
 
